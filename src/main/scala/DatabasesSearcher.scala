@@ -1,11 +1,8 @@
-import java.io.FileNotFoundException
-
-import akka.actor.SupervisorStrategy.{Escalate, Restart, Stop}
-import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, Props, SupervisorStrategy}
-import akka.dispatch.sysmsg.Failed
-import akka.pattern.{BackoffOpts, BackoffSupervisor}
+import akka.actor.SupervisorStrategy.{Stop}
+import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props}
 
 import scala.concurrent.duration._
+import Dispatcher.Search
 
 class DatabasesSearcher extends Actor {
   import DatabasesSearcher._
@@ -20,7 +17,7 @@ class DatabasesSearcher extends Actor {
       val s2 = system.actorOf(DatabaseSearcher.props)
       client = sender()
       s1.tell(SearchIn(database1Path, title), self)
-      s2.tell(SearchIn(database1Path, title), self)
+      s2.tell(SearchIn(database2Path, title), self)
     case Result(price) =>
       client.tell(PriceOf(searchedTitle, price), null)
       context.stop(self)
@@ -30,11 +27,17 @@ class DatabasesSearcher extends Actor {
         client.tell(NotFound(searchedTitle), null)
         context.stop(self)
       }
+
   }
   override val supervisorStrategy =
     OneForOneStrategy(maxNrOfRetries = 3, withinTimeRange = 1 minute) {
-      case _: FileNotFoundException    => Stop
-      case _: Exception                => Escalate
+      case _: Exception =>
+        receivedResponses += 1
+        if (receivedResponses == 2) {
+          client.tell(NotFound(searchedTitle), null)
+          context.stop(self)
+        }
+        Stop
     }
 
 }

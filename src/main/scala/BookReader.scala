@@ -1,12 +1,14 @@
 import java.io.FileNotFoundException
 
+import DatabasesSearcher.NotFound
 import akka.NotUsed
-import akka.actor.SupervisorStrategy.{Escalate, Restart}
 import akka.actor.{Actor, OneForOneStrategy, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 
 import scala.concurrent.duration._
+import Dispatcher._
+import akka.actor.SupervisorStrategy.{Resume, Stop}
 
 class BookReader extends Actor{
   import BookReader._
@@ -19,6 +21,13 @@ class BookReader extends Actor{
       val sink = Sink.actorRef(sender(), StreamEnd(title))
       slowSource.runWith(sink)(materializer)
   }
+  override val supervisorStrategy =
+    OneForOneStrategy(maxNrOfRetries = 3, withinTimeRange = 1 minute) {
+      case _: FileNotFoundException =>
+        Stop
+      case _: Exception =>
+        Resume
+    }
 }
 
 object BookReader{

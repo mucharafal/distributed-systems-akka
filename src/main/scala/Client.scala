@@ -1,7 +1,9 @@
 import BookReader.{StreamEnd, StreamLine}
 import Client.Start
 import DatabasesSearcher.{NotFound, PriceOf}
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, Props}
+
+import Dispatcher._
 
 class Client extends Actor {
 
@@ -26,8 +28,9 @@ class Client extends Actor {
   }
 
   def run(): Unit = {
-    val system = context.system
-    val dispatcher = system.actorOf(Dispatcher.props)
+    val path = "akka.tcp://" + Main.bookstoreSystemName + "@127.0.0.1:2552/user/dispatcher"
+    val dispatcher = context.actorSelection(path)
+    println(dispatcher)
     while(true) {
       val input = readLine()
       val processedInput = input.split(" ")
@@ -48,5 +51,5 @@ class Client extends Actor {
 
 object Client {
   case object Start
- def props: Props = Props[Client]
+  def props: Props = Props[Client]
 }

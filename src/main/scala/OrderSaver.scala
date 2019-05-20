@@ -4,6 +4,7 @@ import java.nio.file.Files
 import OrderSaver.Saved
 import akka.actor.{Actor, Props}
 
+import Dispatcher.SaveOrder
 
 class OrderSaver extends Actor {
 
